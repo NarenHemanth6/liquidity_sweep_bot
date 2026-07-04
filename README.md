@@ -28,9 +28,12 @@ liquidity_sweep_bot/
 │   └── watchlist.yaml     # candidate symbol universe
 ├── data/
 │   ├── raw/               # place your own real historical CSVs here (git-ignored)
+│   │   └── README.md      # naming convention + quick-start for real CSVs
 │   ├── processed/         # optional cleaned/derived CSVs (git-ignored)
 │   ├── examples/          # committed synthetic example CSVs
 │   └── README.md          # CSV schema, validation, and backtest-workflow docs
+├── docs/
+│   └── real_market_data_plan.md   # planning-only: symbols, timeframe, session coverage
 ├── src/
 │   ├── config_loader.py   # loads YAML + env vars, never hardcodes secrets
 │   ├── watchlist.py       # filters candidates by price/market-cap
@@ -144,6 +147,44 @@ best/worst trade, trades per symbol, and daily P&L. Everything here —
 like every other script in this project — only ever exercises
 `PaperBroker`; no network access, broker connection, or credentials are
 involved anywhere in this path, and no real market data is downloaded.
+
+## Real Market Data Backtesting Workflow
+
+This project does not download market data itself — see
+`docs/real_market_data_plan.md` for the full data-acquisition plan
+(recommended first symbols, required timeframe/columns/session
+coverage). Once you have real historical 1-minute CSVs in hand:
+
+1. **Get CSV data from a provider** — export or download 1-minute
+   OHLCV bars yourself (any provider/method), covering at least two
+   consecutive trading days, ideally with premarket bars included, for
+   your chosen symbols plus `QQQ`.
+2. **Place the files in `data/raw/`** — one file per symbol, named
+   `{SYMBOL}_bars.csv` (e.g. `NVDA_bars.csv`, `QQQ_bars.csv`); see
+   `data/raw/README.md` for the exact naming convention and
+   `data/README.md` for the required column schema.
+3. **Run validation**:
+   ```bash
+   python -m scripts.validate_data
+   ```
+4. **Run the real CSV backtest**:
+   ```bash
+   python -m scripts.run_real_csv_backtest
+   ```
+5. **Review `logs/real_csv_backtest_journal.csv`** — the full
+   per-trade journal from that run, alongside the printed summary
+   report (total trades, win rate, net P&L, profit factor, max
+   drawdown, ending equity, best/worst trade, trades per symbol, daily
+   P&L).
+
+**Safety note: this project is still paper/simulation only. No broker
+execution exists.** Nothing in this workflow places a real order,
+connects to a broker (no IBKR, no Trade The Pool, no other
+broker/prop-firm integration), or requires API keys — the optional
+`ALPACA_DATA_API_KEY` / `ALPACA_DATA_SECRET_KEY` / `POLYGON_API_KEY`
+placeholders in `.env.example` are unused by all current code and
+tests; they exist only for a possible future, separately-approved
+stage.
 
 ## Running tests
 
