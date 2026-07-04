@@ -48,6 +48,8 @@ class TradeSignal:
             written to the trade journal.
         timestamp: Timestamp of the rejection candle that triggered
             the signal.
+        swept_level: The specific PMH/PML/PDH/PDL price level that was
+            swept and reclaimed to produce this signal.
     """
 
     symbol: str
@@ -58,6 +60,7 @@ class TradeSignal:
     risk_per_share: float
     reason_entry: str
     timestamp: datetime
+    swept_level: float
 
 
 def qqq_direction(qqq_bar: Mapping[str, Any], neutral_band_pct: float = 0.05) -> Direction:
@@ -187,6 +190,7 @@ def detect_long_setup(
         risk_per_share=risk,
         reason_entry=reason,
         timestamp=bar["timestamp"],
+        swept_level=swept_level,
     )
 
 
@@ -262,6 +266,7 @@ def detect_short_setup(
         risk_per_share=risk,
         reason_entry=reason,
         timestamp=bar["timestamp"],
+        swept_level=swept_level,
     )
 
 

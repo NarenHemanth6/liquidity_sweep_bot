@@ -66,6 +66,40 @@ structure is reviewed.
   consecutive losses, no new entries after 12:45 ET, force-flat by
   13:00 ET.
 
+## Sample simulation (paper mode)
+
+`sample_data/` contains fully synthetic, fabricated OHLCV minute bars —
+not real market data — for a fictional stock (`DEMO`, priced above
+$100) and QQQ, covering one prior day plus a full simulation day. The
+data has two liquidity-sweep setups deliberately built in: a long
+setup sweeping the previous-day low that runs to its 2.5R target, and
+a short setup sweeping the premarket high that gets stopped out. This
+demonstrates both a winning and a losing trade end-to-end.
+
+Regenerate the sample data (deterministic, fixed random seed):
+
+```bash
+python -m sample_data.generate_sample_data
+```
+
+Run the sample simulation and print a full report for each trade:
+
+```bash
+python -m scripts.run_sample_simulation
+```
+
+This exercises the exact same paper-trading pipeline as `src.main`
+(`run_session`) — market levels, candle features, QQQ confirmation,
+strategy detection, position sizing, risk controls, and `PaperBroker`
+— and writes results to `logs/sample_trade_journal.csv`. It never
+connects to a broker or places a real order.
+
+## Running tests
+
+```bash
+python -m pytest -q
+```
+
 ## Setup (once implementation is complete)
 
 ```bash
@@ -84,12 +118,6 @@ python -m src.main
 This will refuse to start unless `config/settings.yaml` has
 `mode.trading_mode: "paper"` — which is the default and, in v1, the
 **only** supported mode.
-
-## Running tests
-
-```bash
-pytest
-```
 
 ## Security notes
 

@@ -18,6 +18,7 @@ REQUIRED_COLUMNS = (
     "timestamp",
     "symbol",
     "direction",
+    "swept_level",
     "entry",
     "stop",
     "target",

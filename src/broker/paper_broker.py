@@ -43,6 +43,7 @@ class Position:
         target_prices: Take-profit price levels, in R-multiple order.
         entry_time: Timestamp the position was opened.
         reason_entry: Justification string carried from the TradeSignal.
+        swept_level: The PMH/PML/PDH/PDL level swept to trigger entry.
     """
 
     symbol: str
@@ -53,6 +54,7 @@ class Position:
     target_prices: list[float]
     entry_time: datetime
     reason_entry: str
+    swept_level: float
 
 
 def _apply_slippage(price: float, direction: str, slippage_bps: float) -> float:
@@ -161,6 +163,7 @@ class PaperBroker:
             target_prices=list(signal.targets),
             entry_time=signal.timestamp,
             reason_entry=signal.reason_entry,
+            swept_level=signal.swept_level,
         )
 
         self._log(
@@ -215,6 +218,7 @@ class PaperBroker:
             "timestamp": exit_time,
             "symbol": position.symbol,
             "direction": position.direction,
+            "swept_level": position.swept_level,
             "entry": position.entry_price,
             "stop": position.stop_price,
             "target": target_label,
