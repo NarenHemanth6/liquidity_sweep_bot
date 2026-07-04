@@ -14,5 +14,13 @@ logs/*.log
 logs/*.csv
 !logs/.gitkeep
 
+# Real historical data placed locally by the user (never committed).
+# data/examples/ is intentionally NOT covered here -- its synthetic
+# example CSVs are committed on purpose.
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
 # OS
 .DS_Store

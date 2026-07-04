@@ -260,14 +260,16 @@ def generate_sample_bars() -> tuple[pd.DataFrame, pd.DataFrame]:
     )
 
     # Bullish QQQ bar at the LONG trigger's timestamp (+0.14% move).
+    # high/low are set explicitly (not left over from the baseline walk)
+    # so the bar stays a valid OHLC candle: high >= open/close, low <= open/close.
     long_trigger_ts = day2_reg_ts[long_idx]
     match = qqq_bars["timestamp"] == long_trigger_ts
-    qqq_bars.loc[match, ["open", "close"]] = [500.00, 500.70]
+    qqq_bars.loc[match, ["open", "high", "low", "close"]] = [500.00, 500.75, 499.95, 500.70]
 
     # Bearish QQQ bar at the SHORT trigger's timestamp (-0.14% move).
     short_trigger_ts = day2_reg_ts[short_idx]
     match = qqq_bars["timestamp"] == short_trigger_ts
-    qqq_bars.loc[match, ["open", "close"]] = [501.00, 500.30]
+    qqq_bars.loc[match, ["open", "high", "low", "close"]] = [501.00, 501.05, 500.25, 500.30]
 
     qqq_bars = qqq_bars.sort_values("timestamp").reset_index(drop=True)
 
