@@ -1,0 +1,72 @@
+# =============================================================================
+# Liquidity Sweep Bot — Strategy & Risk Configuration
+# =============================================================================
+# This file controls ALL tunable behavior. No thresholds should be hardcoded
+# in source code — they should be read from here via src/config_loader.py.
+# =============================================================================
+
+mode:
+  # "paper" = simulated fills only, no real orders ever leave the process.
+  # "live" is intentionally NOT implemented in v1. Even if set here, the
+  # bot must refuse to start in live mode unless a future explicit
+  # ENABLE_LIVE_TRADING=true environment variable AND a live broker
+  # adapter both exist. See src/broker/ for details.
+  trading_mode: "paper"
+  enable_live_trading: false   # hard-coded false; real flag will live in env vars later
+
+session:
+  timezone: "America/New_York"
+  session_start: "09:35"
+  session_end: "13:00"
+  no_new_trades_after: "12:45"
+  force_flat_time: "13:00"
+
+universe_filters:
+  min_price: 100.0
+  min_market_cap: 1000000000   # $1B
+
+watchlist:
+  # Static starter watchlist; can be overridden by config/watchlist.yaml
+  symbols: ["AAPL", "MSFT", "NVDA", "META", "GOOGL", "AMZN", "AVGO", "LLY"]
+  confirmation_symbol: "QQQ"
+
+market_levels:
+  premarket_start: "04:00"
+  premarket_end: "09:30"
+  vwap_reset: "session"   # recalculated each trading day
+
+candle_features:
+  volume_lookback_bars: 20   # bars used for "recent average volume"
+  volume_spike_multiplier: 1.5
+
+strategy:
+  liquidity_sweep:
+    min_lower_wick_ratio: 0.50    # for long setups
+    min_upper_wick_ratio: 0.50    # for short setups
+    min_volume_multiple: 1.5
+    reward_risk_targets: [2.5, 3.0]
+    qqq_confirmation:
+      long_requires: ["bullish", "neutral"]
+      short_requires: ["bearish", "neutral"]
+      neutral_band_pct: 0.05   # QQQ move within +/-0.05% counts as neutral
+
+position_sizing:
+  risk_per_trade_pct: 0.333       # percent of account equity risked per trade
+  max_spread_pct: 0.15            # reject trade if bid/ask spread exceeds this % of price
+  min_quantity: 1                 # reject trade if computed size rounds below this
+
+risk_controls:
+  max_trades_per_day: 3
+  max_daily_loss_pct: 1.0
+  max_consecutive_losses: 2
+
+broker:
+  starting_paper_equity: 25000.0
+  commission_per_share: 0.0
+  slippage_bps: 0              # basis points of simulated slippage on fills
+
+logging:
+  log_dir: "logs"
+  trade_journal_file: "logs/trade_journal.csv"
+  order_log_file: "logs/orders.log"
+  level: "INFO"

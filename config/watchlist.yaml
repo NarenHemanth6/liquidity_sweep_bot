@@ -1,0 +1,20 @@
+# =============================================================================
+# Watchlist — editable independently of core strategy settings
+# =============================================================================
+# Symbols here are candidates only. The watchlist module (src/watchlist.py)
+# will still filter every symbol at runtime against universe_filters in
+# settings.yaml (min_price, min_market_cap) before it becomes tradable.
+
+confirmation_symbol: "QQQ"
+
+symbols:
+  - AAPL
+  - MSFT
+  - NVDA
+  - META
+  - GOOGL
+  - AMZN
+  - AVGO
+  - LLY
+  - JPM
+  - UNH

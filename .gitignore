@@ -1,0 +1,18 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+
+# Logs & journal output (generated at runtime)
+logs/*.log
+logs/*.csv
+!logs/.gitkeep
+
+# OS
+.DS_Store
