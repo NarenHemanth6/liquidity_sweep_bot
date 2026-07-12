@@ -44,6 +44,10 @@ class Position:
         entry_time: Timestamp the position was opened.
         reason_entry: Justification string carried from the TradeSignal.
         swept_level: The PMH/PML/PDH/PDL level swept to trigger entry.
+        swept_level_type: Which level was swept -- "PMH"/"PML"/"PDH"/"PDL".
+        wick_ratio: The rejection candle's wick ratio at signal time.
+        volume_multiple: bar volume / avg_volume at signal time.
+        qqq_confirmation: QQQ's classified direction at signal time.
     """
 
     symbol: str
@@ -55,6 +59,10 @@ class Position:
     entry_time: datetime
     reason_entry: str
     swept_level: float
+    swept_level_type: str
+    wick_ratio: float
+    volume_multiple: float
+    qqq_confirmation: str
 
 
 def _apply_slippage(price: float, direction: str, slippage_bps: float) -> float:
@@ -164,6 +172,10 @@ class PaperBroker:
             entry_time=signal.timestamp,
             reason_entry=signal.reason_entry,
             swept_level=signal.swept_level,
+            swept_level_type=signal.swept_level_type,
+            wick_ratio=signal.wick_ratio,
+            volume_multiple=signal.volume_multiple,
+            qqq_confirmation=signal.qqq_confirmation,
         )
 
         self._log(
@@ -191,8 +203,10 @@ class PaperBroker:
 
         Returns:
             A trade record dict suitable for TradeJournal.record_trade,
-            containing: timestamp, symbol, direction, entry, stop,
-            target, risk_amount, quantity, exit, pnl, reason_entry,
+            containing: timestamp, entry_time, symbol, direction,
+            swept_level, swept_level_type, entry, stop, target,
+            risk_amount, quantity, exit, pnl, r_multiple, wick_ratio,
+            volume_multiple, qqq_confirmation, reason_entry,
             reason_exit.
         """
         if position.direction == "long":
@@ -205,6 +219,7 @@ class PaperBroker:
         self._equity += pnl
 
         risk_amount = abs(position.entry_price - position.stop_price) * position.quantity
+        r_multiple = pnl / risk_amount if risk_amount > 0 else 0.0
 
         self._log(
             f"{exit_time} EXIT {position.symbol} {position.direction} "
@@ -216,9 +231,11 @@ class PaperBroker:
 
         return {
             "timestamp": exit_time,
+            "entry_time": position.entry_time,
             "symbol": position.symbol,
             "direction": position.direction,
             "swept_level": position.swept_level,
+            "swept_level_type": position.swept_level_type,
             "entry": position.entry_price,
             "stop": position.stop_price,
             "target": target_label,
@@ -226,6 +243,10 @@ class PaperBroker:
             "quantity": position.quantity,
             "exit": exit_price,
             "pnl": pnl,
+            "r_multiple": r_multiple,
+            "wick_ratio": position.wick_ratio,
+            "volume_multiple": position.volume_multiple,
+            "qqq_confirmation": position.qqq_confirmation,
             "reason_entry": position.reason_entry,
             "reason_exit": exit_reason,
         }

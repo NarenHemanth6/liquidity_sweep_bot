@@ -57,6 +57,14 @@ def _parse_args() -> argparse.Namespace:
         default=DEFAULT_CONFIRMATION_SYMBOL,
         help=f"Directional confirmation symbol (default: {DEFAULT_CONFIRMATION_SYMBOL})",
     )
+    parser.add_argument(
+        "--append-journal",
+        action="store_true",
+        help=(
+            "Append this run's trades to any existing journal file instead of the "
+            "default (overwrite it, so the journal contains only this run's trades)."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -244,6 +252,7 @@ def main() -> None:
             qqq_bars=qqq_bars,
             price_lookup=price_lookup,
             market_cap_lookup=market_cap_lookup,
+            overwrite_journal=not args.append_journal,
         )
     except LiveTradingDisabledError as exc:  # pragma: no cover - safety guard
         print(f"[REFUSED TO START] {exc}", file=sys.stderr)

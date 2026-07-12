@@ -154,6 +154,7 @@ def run_backtest(
     qqq_bars: pd.DataFrame,
     price_lookup: dict[str, float],
     market_cap_lookup: dict[str, float],
+    overwrite_journal: bool = True,
 ) -> BacktestResult:
     """Run a multi-day historical backtest of the liquidity sweep strategy.
 
@@ -183,6 +184,12 @@ def run_backtest(
             filtering.
         market_cap_lookup: Mapping of symbol -> market cap, for
             watchlist filtering.
+        overwrite_journal: If True (the default), the per-trade journal
+            file starts empty at the beginning of this run -- so every
+            backtest run reports only its own trades, not trades
+            accumulated from previous runs against the same journal
+            path. Pass False to append to an existing journal file
+            instead (explicit opt-in).
 
     Returns:
         A BacktestResult with every closed trade, the equity curve,
@@ -205,7 +212,9 @@ def run_backtest(
         slippage_bps=broker_cfg.get("slippage_bps", 0.0),
         order_log_path=log_cfg.get("order_log_file", "logs/backtest_orders.log"),
     )
-    journal = TradeJournal(log_cfg.get("trade_journal_file", "logs/backtest_trade_journal.csv"))
+    journal = TradeJournal(
+        log_cfg.get("trade_journal_file", "logs/backtest_trade_journal.csv"), overwrite=overwrite_journal
+    )
 
     tz = settings["session"]["timezone"]
     session_start = settings["session"]["session_start"]

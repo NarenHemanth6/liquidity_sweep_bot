@@ -16,9 +16,11 @@ import pandas as pd
 
 REQUIRED_COLUMNS = (
     "timestamp",
+    "entry_time",
     "symbol",
     "direction",
     "swept_level",
+    "swept_level_type",
     "entry",
     "stop",
     "target",
@@ -26,24 +28,49 @@ REQUIRED_COLUMNS = (
     "quantity",
     "exit",
     "pnl",
+    "r_multiple",
+    "wick_ratio",
+    "volume_multiple",
+    "qqq_confirmation",
     "reason_entry",
     "reason_exit",
 )
 
 
 class TradeJournal:
-    """CSV-backed append-only trade journal."""
+    """CSV-backed trade journal. Append-only within a run; optionally
+    starts each run from a clean file via `overwrite`."""
 
-    def __init__(self, path: str = "logs/trade_journal.csv") -> None:
+    def __init__(self, path: str = "logs/trade_journal.csv", overwrite: bool = False) -> None:
         """Initialize the journal, ensuring the parent directory exists.
 
         Args:
             path: File path for the CSV journal.
+            overwrite: If True, delete any existing file at `path` right
+                now, so the first record_trade() call starts a fresh
+                file (previous runs' rows are not carried over). If
+                False (this class's default), an existing file is left
+                alone and new trades are appended to it.
+
+                This class's own default is non-destructive so that
+                constructing a TradeJournal purely to call read_all()
+                (e.g. to print a summary after a run) never wipes data
+                a previous TradeJournal instance just wrote. Callers
+                that want "fresh journal every run" -- e.g. every
+                backtest -- pass overwrite=True explicitly; see
+                src.backtesting.engine.run_backtest's own
+                overwrite_journal parameter (default True), which is
+                the default actually experienced by every backtest CLI
+                script.
         """
         self.path = path
         parent = Path(path).parent
         if str(parent) not in ("", "."):
             parent.mkdir(parents=True, exist_ok=True)
+        if overwrite:
+            file_path = Path(path)
+            if file_path.exists():
+                file_path.unlink()
 
     def record_trade(self, trade_record: dict[str, Any]) -> None:
         """Append one completed trade to the journal.

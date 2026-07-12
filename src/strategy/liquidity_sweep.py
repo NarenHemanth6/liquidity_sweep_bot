@@ -50,6 +50,17 @@ class TradeSignal:
             the signal.
         swept_level: The specific PMH/PML/PDH/PDL price level that was
             swept and reclaimed to produce this signal.
+        swept_level_type: Which level was swept -- "PMH", "PML", "PDH",
+            or "PDL" -- diagnostic-only label alongside swept_level.
+        wick_ratio: The rejection candle's lower_wick_ratio (long) or
+            upper_wick_ratio (short) value that was checked against
+            cfg's minimum -- recorded for diagnostics only.
+        volume_multiple: bar volume / avg_volume at signal time --
+            recorded for diagnostics only (the pass/fail check itself
+            already happened via volume_spike()).
+        qqq_confirmation: QQQ's classified direction ("bullish" /
+            "bearish" / "neutral") used to confirm this signal --
+            recorded for diagnostics only.
     """
 
     symbol: str
@@ -61,6 +72,10 @@ class TradeSignal:
     reason_entry: str
     timestamp: datetime
     swept_level: float
+    swept_level_type: str
+    wick_ratio: float
+    volume_multiple: float
+    qqq_confirmation: str
 
 
 def qqq_direction(qqq_bar: Mapping[str, Any], neutral_band_pct: float = 0.05) -> Direction:
@@ -148,9 +163,11 @@ def detect_long_setup(
     pml = levels.get("PML")
     pdl = levels.get("PDL")
     swept_level = None
-    for level in (pml, pdl):
+    swept_level_type = None
+    for level_type, level in (("PML", pml), ("PDL", pdl)):
         if level is not None and bar["low"] < level <= bar["close"]:
             swept_level = level
+            swept_level_type = level_type
             break
 
     if swept_level is None:
@@ -173,6 +190,7 @@ def detect_long_setup(
         return None
 
     targets = _build_targets(entry, risk, "long", cfg["reward_risk_targets"])
+    volume_multiple = bar["volume"] / avg_volume if avg_volume else float("nan")
 
     reason = (
         f"Long liquidity sweep: swept level {swept_level:.2f}, "
@@ -191,6 +209,10 @@ def detect_long_setup(
         reason_entry=reason,
         timestamp=bar["timestamp"],
         swept_level=swept_level,
+        swept_level_type=swept_level_type,
+        wick_ratio=lwr,
+        volume_multiple=volume_multiple,
+        qqq_confirmation=qqq_dir,
     )
 
 
@@ -224,9 +246,11 @@ def detect_short_setup(
     pmh = levels.get("PMH")
     pdh = levels.get("PDH")
     swept_level = None
-    for level in (pmh, pdh):
+    swept_level_type = None
+    for level_type, level in (("PMH", pmh), ("PDH", pdh)):
         if level is not None and bar["high"] > level >= bar["close"]:
             swept_level = level
+            swept_level_type = level_type
             break
 
     if swept_level is None:
@@ -249,6 +273,7 @@ def detect_short_setup(
         return None
 
     targets = _build_targets(entry, risk, "short", cfg["reward_risk_targets"])
+    volume_multiple = bar["volume"] / avg_volume if avg_volume else float("nan")
 
     reason = (
         f"Short liquidity sweep: swept level {swept_level:.2f}, "
@@ -267,6 +292,10 @@ def detect_short_setup(
         reason_entry=reason,
         timestamp=bar["timestamp"],
         swept_level=swept_level,
+        swept_level_type=swept_level_type,
+        wick_ratio=uwr,
+        volume_multiple=volume_multiple,
+        qqq_confirmation=qqq_dir,
     )
 
 
