@@ -30,7 +30,7 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.backtesting.data_loader import load_backtest_dataset  # noqa: E402
+from src.backtesting.data_loader import SYMBOL_FILE_SUFFIXES, load_backtest_dataset  # noqa: E402
 from src.backtesting.data_validation import validate_directory  # noqa: E402
 from src.backtesting.engine import LiveTradingDisabledError, run_backtest  # noqa: E402
 from src.config_loader import load_settings  # noqa: E402
@@ -50,7 +50,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--data-dir",
         default=DEFAULT_DATA_DIR,
-        help=f"Directory of '{{symbol}}_bars.csv' files (default: {DEFAULT_DATA_DIR})",
+        help=f"Directory of '{{symbol}}_bars.csv' or '{{symbol}}_1min.csv' files (default: {DEFAULT_DATA_DIR})",
     )
     parser.add_argument(
         "--confirmation-symbol",
@@ -61,7 +61,12 @@ def _parse_args() -> argparse.Namespace:
 
 
 def _discover_tradable_symbols(data_dir: Path, confirmation_symbol: str) -> list[str]:
-    """Discover tradable symbols from '{symbol}_bars.csv' files in data_dir.
+    """Discover tradable symbols from historical CSV files in data_dir.
+
+    Recognizes every naming convention in SYMBOL_FILE_SUFFIXES (e.g.
+    "{symbol}_bars.csv" and "{symbol}_1min.csv", the latter matching
+    scripts/download_ibkr_bars.py's output directly, with no rename
+    step required).
 
     Args:
         data_dir: Directory to scan.
@@ -71,15 +76,16 @@ def _discover_tradable_symbols(data_dir: Path, confirmation_symbol: str) -> list
     Returns:
         Sorted list of tradable symbols found.
     """
-    symbols: list[str] = []
     if not data_dir.exists():
-        return symbols
-    for path in sorted(data_dir.glob("*_bars.csv")):
-        stem = path.stem
-        symbol = stem[: -len("_bars")] if stem.endswith("_bars") else stem
-        if symbol and symbol != confirmation_symbol:
-            symbols.append(symbol)
-    return symbols
+        return []
+    symbols: set[str] = set()
+    for suffix in SYMBOL_FILE_SUFFIXES:
+        for path in data_dir.glob(f"*{suffix}.csv"):
+            stem = path.stem
+            symbol = stem[: -len(suffix)] if stem.endswith(suffix) else stem
+            if symbol and symbol != confirmation_symbol:
+                symbols.add(symbol)
+    return sorted(symbols)
 
 
 def _best_and_worst_trade(
@@ -202,8 +208,8 @@ def main() -> None:
     symbols = _discover_tradable_symbols(data_dir, args.confirmation_symbol)
     if not symbols:
         print(
-            f"[NO DATA] No tradable '{{symbol}}_bars.csv' files found in {data_dir} "
-            f"(besides the confirmation symbol).",
+            f"[NO DATA] No tradable '{{symbol}}_bars.csv' or '{{symbol}}_1min.csv' files found in "
+            f"{data_dir} (besides the confirmation symbol).",
             file=sys.stderr,
         )
         sys.exit(1)

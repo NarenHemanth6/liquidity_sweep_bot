@@ -33,7 +33,8 @@ liquidity_sweep_bot/
 │   ├── examples/          # committed synthetic example CSVs
 │   └── README.md          # CSV schema, validation, and backtest-workflow docs
 ├── docs/
-│   └── real_market_data_plan.md   # planning-only: symbols, timeframe, session coverage
+│   ├── real_market_data_plan.md   # planning-only: symbols, timeframe, session coverage
+│   └── ibkr_historical_data_setup.md   # TWS/IB Gateway setup for the historical downloader
 ├── src/
 │   ├── config_loader.py   # loads YAML + env vars, never hardcodes secrets
 │   ├── watchlist.py       # filters candidates by price/market-cap
@@ -58,7 +59,8 @@ liquidity_sweep_bot/
 │   ├── run_sample_simulation.py    # one-day paper sim on sample_data/
 │   ├── run_backtest.py             # multi-day backtest on sample_data/backtest/
 │   ├── validate_data.py            # validates CSVs in data/raw/
-│   └── run_real_csv_backtest.py    # multi-day backtest on data/raw/ (your own CSVs)
+│   ├── run_real_csv_backtest.py    # multi-day backtest on data/raw/ (your own CSVs)
+│   └── download_ibkr_bars.py       # downloads closed historical bars from IBKR (no orders, no live trading)
 ├── tests/                  # unit tests per module
 ├── logs/                   # generated at runtime (git-ignored)
 ├── requirements.txt
@@ -186,6 +188,46 @@ placeholders in `.env.example` are unused by all current code and
 tests; they exist only for a possible future, separately-approved
 stage.
 
+## IBKR Historical Data Download (historical bars only)
+
+`scripts/download_ibkr_bars.py` downloads **closed historical
+1-minute bars** from Interactive Brokers' TWS/IB Gateway API and
+writes them as local CSV files, as an alternative to manually
+exporting CSVs from another provider. See
+`docs/ibkr_historical_data_setup.md` for full TWS/IB Gateway setup
+instructions (paper-trading API port, enabling the API, etc.).
+
+**Safety scope — this is historical data download only:**
+
+- The only IBKR API call made anywhere in this script is
+  `reqHistoricalData`. It never calls `placeOrder`, `cancelOrder`, or
+  any other order-routing method, and never requests account,
+  portfolio, or position data.
+- No live trading — this doesn't touch `src/broker/paper_broker.py` or
+  the strategy/backtest pipeline at all; it only writes CSV files.
+- No Trade The Pool, no Alpaca, no Webull.
+- No account numbers, usernames, or passwords are read or stored.
+  `IBKR_HOST` / `IBKR_PORT` / `IBKR_CLIENT_ID` (see `.env.example`) are
+  local TWS/IB Gateway connection settings, not credentials.
+- All tests for this script (`tests/test_download_ibkr_bars.py`) use
+  hand-built mocks in place of IBKR's `EClient` — no test opens a real
+  socket or connects to TWS/IB Gateway.
+
+Example — download one day of 1-minute bars for QQQ (with TWS running
+in paper-trading mode and the API enabled per the setup doc):
+
+```bash
+.venv\Scripts\python.exe -m scripts.download_ibkr_bars --symbols QQQ --start 2026-07-01 --end 2026-07-01 --bar-size "1 min" --output-dir data/raw --host 127.0.0.1 --port 7497 --client-id 101
+```
+
+This writes `data/raw/QQQ_1min.csv`. No rename is needed — validate and
+backtest as usual, straight away:
+
+```bash
+.venv\Scripts\python.exe -m scripts.validate_data
+.venv\Scripts\python.exe -m scripts.run_real_csv_backtest
+```
+
 ## Running tests
 
 ```bash
@@ -222,8 +264,10 @@ This will refuse to start unless `config/settings.yaml` has
 
 ## Roadmap (not in this version)
 
-- Downloading real market data from the internet (only local,
-  manually-placed CSV files are supported today — see `data/README.md`)
+- Automated historical data download from other providers (IBKR
+  historical bars are now supported — see
+  `docs/ibkr_historical_data_setup.md`; other providers still require
+  manually-placed CSV files — see `data/README.md`)
 - Real-time market data adapter
 - Live broker adapter (explicitly gated, off by default)
 - Web/CLI dashboard for the trade journal

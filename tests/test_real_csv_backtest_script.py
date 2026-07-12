@@ -114,6 +114,28 @@ def test_discover_tradable_symbols_empty_directory(tmp_path):
     assert script._discover_tradable_symbols(tmp_path / "missing", "QQQ") == []
 
 
+def test_discover_tradable_symbols_recognizes_1min_suffix_directly(tmp_path):
+    """scripts/download_ibkr_bars.py writes '{symbol}_1min.csv' -- this
+    must be discovered directly, with no rename to '{symbol}_bars.csv'."""
+    _write_csv(tmp_path, "DEMO_1min.csv", _demo_rows())
+    _write_csv(tmp_path, "QQQ_1min.csv", _qqq_rows())
+    _write_csv(tmp_path, "AAPL_1min.csv", _demo_rows())
+
+    symbols = script._discover_tradable_symbols(tmp_path, "QQQ")
+
+    assert symbols == ["AAPL", "DEMO"]
+
+
+def test_discover_tradable_symbols_dedupes_mixed_suffix_files(tmp_path):
+    _write_csv(tmp_path, "DEMO_bars.csv", _demo_rows())
+    _write_csv(tmp_path, "AAPL_1min.csv", _demo_rows())
+    _write_csv(tmp_path, "QQQ_bars.csv", _qqq_rows())
+
+    symbols = script._discover_tradable_symbols(tmp_path, "QQQ")
+
+    assert symbols == ["AAPL", "DEMO"]
+
+
 def test_best_and_worst_trade():
     trades = [{"pnl": 50.0}, {"pnl": -20.0}, {"pnl": 100.0}]
 
@@ -172,6 +194,21 @@ def test_run_real_csv_backtest_end_to_end(tmp_path, patched_run, monkeypatch, ca
     assert len(journal_df) == 1
     assert journal_df.iloc[0]["pnl"] > 0
     assert journal_df.iloc[0]["reason_exit"] == "target_2.5R"
+
+
+def test_run_real_csv_backtest_end_to_end_with_1min_suffix_files(tmp_path, patched_run, monkeypatch, capsys):
+    """The exact IBKR-download workflow: {symbol}_1min.csv files run
+    through validation and backtest with no rename step."""
+    _write_csv(tmp_path, "DEMO_1min.csv", _demo_rows())
+    _write_csv(tmp_path, "QQQ_1min.csv", _qqq_rows())
+
+    monkeypatch.setattr("sys.argv", ["run_real_csv_backtest.py", "--data-dir", str(tmp_path)])
+
+    script.main()  # should complete without raising SystemExit
+
+    captured = capsys.readouterr()
+    assert "REAL CSV HISTORICAL BACKTEST" in captured.out
+    assert "Total trades:       1" in captured.out
 
 
 def test_run_real_csv_backtest_refuses_when_confirmation_symbol_missing(tmp_path, patched_run, monkeypatch, capsys):

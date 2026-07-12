@@ -32,7 +32,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--data-dir",
         default=DEFAULT_DATA_DIR,
-        help=f"Directory of '{{symbol}}_bars.csv' files to validate (default: {DEFAULT_DATA_DIR})",
+        help=(
+            f"Directory of '{{symbol}}_bars.csv' or '{{symbol}}_1min.csv' files to validate "
+            f"(default: {DEFAULT_DATA_DIR})"
+        ),
     )
     parser.add_argument(
         "--confirmation-symbol",

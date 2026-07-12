@@ -26,6 +26,37 @@ REQUIRED_COLUMNS = ("timestamp", "symbol", "open", "high", "low", "close", "volu
 
 DEFAULT_TIMEZONE = "America/New_York"
 
+# Filename suffixes recognized for a symbol's historical CSV file, tried
+# in this order. "_bars" is this project's original convention
+# (sample_data/backtest/, data/examples/); "_1min" matches the output of
+# scripts/download_ibkr_bars.py, so downloaded files work directly with
+# no rename step.
+SYMBOL_FILE_SUFFIXES = ("_bars", "_1min")
+
+
+def resolve_symbol_csv_path(data_dir: str | Path, symbol: str) -> Path:
+    """Find a symbol's historical CSV file under any recognized naming convention.
+
+    Args:
+        data_dir: Directory to look in.
+        symbol: Ticker symbol to resolve a file for.
+
+    Returns:
+        The first existing "{symbol}{suffix}.csv" path, trying each of
+        SYMBOL_FILE_SUFFIXES in order.
+
+    Raises:
+        FileNotFoundError: If no candidate file exists for any
+            recognized suffix.
+    """
+    data_dir = Path(data_dir)
+    candidates = [data_dir / f"{symbol}{suffix}.csv" for suffix in SYMBOL_FILE_SUFFIXES]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    tried = ", ".join(c.name for c in candidates)
+    raise FileNotFoundError(f"No historical data file found for symbol '{symbol}' in {data_dir} (tried: {tried})")
+
 
 def load_bars_csv(path: str | Path, timezone: str = DEFAULT_TIMEZONE) -> pd.DataFrame:
     """Load one historical OHLCV CSV file that includes a `symbol` column.
@@ -117,9 +148,10 @@ def load_backtest_dataset(
     """Load a full local backtest dataset: one or more tradable symbols
     plus the QQQ (or other) confirmation symbol.
 
-    Expects one file per symbol, named "{symbol}_bars.csv", inside
-    `data_dir` (this matches the layout used by
-    sample_data/backtest/generate_backtest_data.py).
+    Expects one file per symbol inside `data_dir`, named using any
+    recognized suffix in SYMBOL_FILE_SUFFIXES (e.g. "{symbol}_bars.csv",
+    matching sample_data/backtest/generate_backtest_data.py, or
+    "{symbol}_1min.csv", matching scripts/download_ibkr_bars.py).
 
     Args:
         data_dir: Directory containing "{symbol}_bars.csv" files.
@@ -141,10 +173,10 @@ def load_backtest_dataset(
 
     bars_by_symbol: dict[str, pd.DataFrame] = {}
     for symbol in symbols:
-        path = data_dir / f"{symbol}_bars.csv"
+        path = resolve_symbol_csv_path(data_dir, symbol)
         bars_by_symbol[symbol] = load_symbol_bars(path, symbol, timezone=timezone)
 
-    qqq_path = data_dir / f"{confirmation_symbol}_bars.csv"
+    qqq_path = resolve_symbol_csv_path(data_dir, confirmation_symbol)
     qqq_bars = load_symbol_bars(qqq_path, confirmation_symbol, timezone=timezone)
 
     return bars_by_symbol, qqq_bars

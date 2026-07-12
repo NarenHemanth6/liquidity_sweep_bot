@@ -14,22 +14,26 @@ here stay **untracked** — they are never committed (see `.gitignore`).
 
 Place **one CSV file per symbol**, including the mandatory `QQQ`
 confirmation file. The loader (`src/backtesting/data_loader.py`) and
-validator (`src/backtesting/data_validation.py`) both expect the
-`{SYMBOL}_bars.csv` naming convention used elsewhere in this project
-(see `sample_data/backtest/` and `data/examples/`):
+validator (`src/backtesting/data_validation.py`) both recognize two
+naming conventions directly, with no rename step required:
 
 ```
-NVDA_bars.csv
-TSLA_bars.csv
+NVDA_bars.csv     <- this project's original convention (manually-acquired CSVs)
+TSLA_bars.csv        (see sample_data/backtest/ and data/examples/)
 AAPL_bars.csv
 MSFT_bars.csv
-QQQ_bars.csv     <- mandatory, used for directional confirmation
+QQQ_bars.csv      <- mandatory, used for directional confirmation
+
+NVDA_1min.csv     <- output of scripts/download_ibkr_bars.py
+TSLA_1min.csv
+AAPL_1min.csv
+MSFT_1min.csv
+QQQ_1min.csv      <- mandatory, used for directional confirmation
 ```
 
-If your provider exports files named differently (for example
-`NVDA_1min.csv`, `TSLA_1min.csv`, `AAPL_1min.csv`, `MSFT_1min.csv`,
-`QQQ_1min.csv`), rename them to the `{SYMBOL}_bars.csv` form above
-before running validation or a backtest.
+Both conventions can even be mixed in the same directory. If your
+provider exports files named some other way, rename them to one of the
+two forms above before running validation or a backtest.
 
 ## Required schema
 

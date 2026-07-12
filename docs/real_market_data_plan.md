@@ -106,6 +106,11 @@ convention and `data/README.md` for the full schema reference. Nothing
 in `data/raw/` is committed to git except the `.gitkeep` placeholder
 (see `.gitignore`); real market data files stay local and untracked.
 
+(As of `scripts/download_ibkr_bars.py`, `{SYMBOL}_1min.csv` is a second
+recognized naming convention — see `docs/ibkr_historical_data_setup.md`
+— for files downloaded directly from IBKR rather than acquired
+manually. Both conventions validate and backtest with no rename step.)
+
 ## No real broker connection required
 
 Acquiring historical 1-minute bars from a market-data provider (e.g.

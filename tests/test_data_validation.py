@@ -176,6 +176,30 @@ def test_validate_directory_with_no_files_at_all(tmp_path):
     assert not result.confirmation_file_found
 
 
+def test_validate_directory_recognizes_1min_suffix_directly(tmp_path):
+    """scripts/download_ibkr_bars.py writes '{symbol}_1min.csv' -- this
+    must validate directly, with no rename to '{symbol}_bars.csv'."""
+    _write_csv(tmp_path, "NVDA_1min.csv", [_good_row(symbol="NVDA")])
+    _write_csv(tmp_path, "QQQ_1min.csv", [_good_row(symbol="QQQ", o=500, h=501, l=499, c=500.5)])
+
+    result = validate_directory(tmp_path, confirmation_symbol="QQQ")
+
+    assert result.is_valid
+    assert result.confirmation_file_found
+    assert len(result.files) == 2
+
+
+def test_validate_directory_accepts_mixed_bars_and_1min_files(tmp_path):
+    _write_csv(tmp_path, "DEMO_bars.csv", [_good_row()])
+    _write_csv(tmp_path, "QQQ_1min.csv", [_good_row(symbol="QQQ", o=500, h=501, l=499, c=500.5)])
+
+    result = validate_directory(tmp_path, confirmation_symbol="QQQ")
+
+    assert result.is_valid
+    assert result.confirmation_file_found
+    assert len(result.files) == 2
+
+
 def test_validate_directory_nonexistent_directory_does_not_raise():
     result = validate_directory("this/directory/does/not/exist", confirmation_symbol="QQQ")
 

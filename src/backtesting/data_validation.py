@@ -31,6 +31,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.backtesting.data_loader import SYMBOL_FILE_SUFFIXES
+
 REQUIRED_COLUMNS = ("timestamp", "symbol", "open", "high", "low", "close", "volume")
 NUMERIC_COLUMNS = ("open", "high", "low", "close", "volume")
 
@@ -174,15 +176,21 @@ class DirectoryValidationResult:
 def validate_directory(
     data_dir: str | Path,
     confirmation_symbol: str = "QQQ",
-    pattern: str = "*_bars.csv",
+    pattern: str | None = None,
 ) -> DirectoryValidationResult:
     """Validate every historical OHLCV CSV file in a directory.
 
     Args:
         data_dir: Directory to scan for CSV files.
         confirmation_symbol: The directional confirmation symbol whose
-            file (e.g. "QQQ_bars.csv") must be present.
-        pattern: Glob pattern used to find CSV files in `data_dir`.
+            file (e.g. "QQQ_bars.csv" or "QQQ_1min.csv") must be present.
+        pattern: Glob pattern used to find CSV files in `data_dir`. If
+            None (the default), every pattern derived from
+            SYMBOL_FILE_SUFFIXES is scanned (e.g. "*_bars.csv" and
+            "*_1min.csv"), so files from any recognized naming
+            convention -- including scripts/download_ibkr_bars.py's
+            "{symbol}_1min.csv" output -- validate directly, with no
+            rename step required.
 
     Returns:
         A DirectoryValidationResult covering every matched file plus
@@ -193,17 +201,21 @@ def validate_directory(
     data_dir = Path(data_dir)
     result = DirectoryValidationResult(directory=str(data_dir), confirmation_symbol=confirmation_symbol)
 
-    paths = sorted(data_dir.glob(pattern)) if data_dir.exists() else []
-    for path in paths:
+    patterns = [pattern] if pattern is not None else [f"*{suffix}.csv" for suffix in SYMBOL_FILE_SUFFIXES]
+    paths: set[Path] = set()
+    if data_dir.exists():
+        for p in patterns:
+            paths.update(data_dir.glob(p))
+    for path in sorted(paths):
         result.files.append(validate_file(path))
 
-    confirmation_path = data_dir / f"{confirmation_symbol}_bars.csv"
-    result.confirmation_file_found = confirmation_path.exists()
+    confirmation_candidates = [data_dir / f"{confirmation_symbol}{suffix}.csv" for suffix in SYMBOL_FILE_SUFFIXES]
+    result.confirmation_file_found = any(c.exists() for c in confirmation_candidates)
     if not result.confirmation_file_found:
-        missing = FileValidationResult(path=str(confirmation_path))
+        missing = FileValidationResult(path=str(confirmation_candidates[0]))
+        tried = ", ".join(c.name for c in confirmation_candidates)
         missing.errors.append(
-            f"confirmation symbol file not found: {confirmation_path.name} "
-            f"(required for directional confirmation)"
+            f"confirmation symbol file not found: tried {tried} (required for directional confirmation)"
         )
         result.files.append(missing)
 

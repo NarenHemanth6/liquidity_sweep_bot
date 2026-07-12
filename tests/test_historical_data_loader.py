@@ -11,6 +11,7 @@ from src.backtesting.data_loader import (
     load_backtest_dataset,
     load_bars_csv,
     load_symbol_bars,
+    resolve_symbol_csv_path,
 )
 
 
@@ -178,6 +179,68 @@ def test_load_backtest_dataset_missing_symbol_file_raises(tmp_path):
 
     with pytest.raises(FileNotFoundError):
         load_backtest_dataset(tmp_path, symbols=["MISSING"], confirmation_symbol="QQQ")
+
+
+def test_resolve_symbol_csv_path_finds_bars_suffix(tmp_path):
+    path = _write_csv(
+        tmp_path,
+        "NVDA_bars.csv",
+        [{"timestamp": "2026-07-01 09:35:00", "symbol": "NVDA", "open": 1, "high": 1, "low": 1, "close": 1, "volume": 1}],
+    )
+
+    assert resolve_symbol_csv_path(tmp_path, "NVDA") == path
+
+
+def test_resolve_symbol_csv_path_finds_1min_suffix_with_no_rename(tmp_path):
+    """scripts/download_ibkr_bars.py writes '{symbol}_1min.csv' -- this must
+    resolve directly, with no rename to '{symbol}_bars.csv' required."""
+    path = _write_csv(
+        tmp_path,
+        "NVDA_1min.csv",
+        [{"timestamp": "2026-07-01 09:35:00", "symbol": "NVDA", "open": 1, "high": 1, "low": 1, "close": 1, "volume": 1}],
+    )
+
+    assert resolve_symbol_csv_path(tmp_path, "NVDA") == path
+
+
+def test_resolve_symbol_csv_path_prefers_bars_suffix_when_both_exist(tmp_path):
+    bars_path = _write_csv(
+        tmp_path,
+        "NVDA_bars.csv",
+        [{"timestamp": "2026-07-01 09:35:00", "symbol": "NVDA", "open": 1, "high": 1, "low": 1, "close": 1, "volume": 1}],
+    )
+    _write_csv(
+        tmp_path,
+        "NVDA_1min.csv",
+        [{"timestamp": "2026-07-01 09:35:00", "symbol": "NVDA", "open": 2, "high": 2, "low": 2, "close": 2, "volume": 2}],
+    )
+
+    assert resolve_symbol_csv_path(tmp_path, "NVDA") == bars_path
+
+
+def test_resolve_symbol_csv_path_raises_when_no_candidate_exists(tmp_path):
+    with pytest.raises(FileNotFoundError, match="NVDA_bars.csv"):
+        resolve_symbol_csv_path(tmp_path, "NVDA")
+
+
+def test_load_backtest_dataset_loads_1min_suffixed_files_directly(tmp_path):
+    """The exact IBKR-download workflow: {symbol}_1min.csv files load
+    with no rename to {symbol}_bars.csv."""
+    _write_csv(
+        tmp_path,
+        "QQQ_1min.csv",
+        [{"timestamp": "2026-07-01 09:35:00", "symbol": "QQQ", "open": 500, "high": 500, "low": 500, "close": 500, "volume": 5}],
+    )
+    _write_csv(
+        tmp_path,
+        "NVDA_1min.csv",
+        [{"timestamp": "2026-07-01 09:35:00", "symbol": "NVDA", "open": 100, "high": 100, "low": 100, "close": 100, "volume": 10}],
+    )
+
+    bars_by_symbol, qqq_bars = load_backtest_dataset(tmp_path, symbols=["NVDA"], confirmation_symbol="QQQ")
+
+    assert set(bars_by_symbol["NVDA"]["symbol"]) == {"NVDA"}
+    assert set(qqq_bars["symbol"]) == {"QQQ"}
 
 
 def test_load_sample_backtest_csv_files_from_disk():
